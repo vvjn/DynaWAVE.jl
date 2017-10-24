@@ -11,8 +11,7 @@ type WaveModel{E,T<:AbstractMatrix,M<:NetalignMeasure}
     phi :: M # objective value
     seeds :: Array{Int} # initial seeds k x 2 int array
     objval :: Float64 # objective value
-    objval_edge :: Float64
-    objval_node :: Float64
+    es
     history :: Vector{Float64} # approx. obj. val. at each iteration
 
     function WaveModel{E,T,M}(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
@@ -21,7 +20,7 @@ type WaveModel{E,T<:AbstractMatrix,M<:NetalignMeasure}
                        seeds) where {E,T,M}
         new(G1,G2, D,
             zeros(Int,size(G1,1)),
-            meas,seeds,0.0,0.0,0.0,Float64[])
+            meas,seeds,0.0,nothing,Float64[])
     end
 end
 function WaveModel(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
@@ -122,7 +121,7 @@ function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,L1::Set{Int,},L2::Se
 end
 
 function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-size(M.seeds,1)),
-                approxobjval::Bool=false)
+                approxobjval=false,details=false)
     # intialize alignment using the seeds aligned pairs
     L1,L2,adjcount1,adjcount2 = initializewave!(M,approxobjval=approxobjval)
 
@@ -161,27 +160,34 @@ function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-size(M.seeds,1)),
         print("Approx. of objective value: $(M.objval)")
     end
     x = measure(M.phi,M.f)
-    M.objval, M.objval_edge, M.objval_node = score(x), score(x.s), score(x.t)
-    println("\nObjective value: $(M.objval), edge $(M.objval_edge), node $(M.objval_node)")
-    M
+    M.objval = score(x)
+    M.es = x
+    println("\nObjective value: $(M.objval)")
+    if details M else M.f end
 end
 
 function wave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
               S::AbstractMatrix, beta::Float64,
-              seeds=zeros(Int,(0,0));skipalign=false)
+              seeds=zeros(Int,(0,0));skipalign=false,details=false)
     M = WaveModel(G1,G2, ConvexCombMeasure(WECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
-    !skipalign && align!(M,approxobjval=false)
-    M
+    if !skipalign
+        align!(M,approxobjval=false,details=details)
+    else
+        M
+    end
 end
 
 function dynawave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                   S::AbstractMatrix, beta::Float64,
-                  seeds=zeros(Int,(0,0));skipalign=false)
+                  seeds=zeros(Int,(0,0));skipalign=false,details=false)
     M = WaveModel(G1,G2, ConvexCombMeasure(DWECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
-    !skipalign && align!(M,approxobjval=false)
-    M
+    if !skipalign
+        align!(M,approxobjval=false,details=details)
+    else
+        M
+    end
 end
 
 # this shuffles each input network independently before passing to wave
@@ -192,7 +198,7 @@ end
 # this is for use in evaluation, where we obv. do not want biases like these
 function waveshuffle(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                      S::AbstractMatrix, beta::Float64,
-                     method=wave,seeds=zeros(Int,(0,0)))
+                     method=wave,seeds=zeros(Int,(0,0)),details=false)
     p1 = randperm(size(G1,1))
     p2 = randperm(size(G2,1))
     q1 = invperm(p1)
@@ -203,10 +209,11 @@ function waveshuffle(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
     I,J = ind2sub(size(Snode), 1:length(Snode))
     T = reshape(S[sub2ind(size(S), p1[I], p2[J])], size(S))
 
-    M = method(H1,H2,T,beta,seeds)
-    N = method(G1,G2,S,beta,seeds,skipalign=true)
+    M = method(H1,H2,T,beta,seeds,details=true)
+    N = method(G1,G2,S,beta,seeds,skipalign=true,details=true)
     N.f = p2[M.f][q1]
     x = measure(N.phi,N.f)
-    N.objval,N.objval_edge,N.objval_node = score(x),score(x.s),score(x.t)
-    N
+    N.objval = score(x)
+    N.es = x
+    if details N else N.f end
 end
