@@ -1,5 +1,10 @@
+__precompile__()
+
 module DynaWAVE
 
-# package code goes here
+using NetalignMeasures
+
+include("wave.jl")
+include("measures.jl")
 
 end # module
