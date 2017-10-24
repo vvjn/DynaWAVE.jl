@@ -15,20 +15,29 @@ Pkg.clone("https://github.com/vvjn/DynaWAVE.jl")
 
 # Aligning two dynamic networks
 
-First, we load the required modules.
+First, we load the DynaWAVE module as well as the NetalignUtils to read network files.
 
 ```julia
 using DynaWAVE
 using NetalignUtils
 ```
 
-Then, we read in the dynamic networks ev1.txt and ev2.txt (from the examples/ directory). Note that
-the two networks are very similar, with corresponding nodes (e.g. g1a corresponds to g2a, and so on).
+Then, we read in the dynamic networks ev1.txt and ev2.txt (from the
+examples/ directory). Note that the two networks are very similar,
+with corresponding nodes (e.g. g1a corresponds to g2a, and so on).
+
+The dynamic networks are represented in the events list format. That
+is, each line represents and event, which is a interaction between two
+nodes from the start time to the end time. For example, on the first
+line of ev1.txt, the event represents an interaction between nodes g1a
+and g1b from start time 3 to end time 5.
+
 
 ```julia
 net1 = readeventlist("ev1.txt")
 net2 = readeventlist("ev2.txt")
-
+```
+```
 shell> cat ev1.txt
 3 5 g1a g1b
 6 7 g1a g1b
@@ -56,7 +65,8 @@ can be generated in many ways including BLAST E-values, (dynamic) graphlet degre
 
 ```julia
 R = readmat("evsim.txt", net1.nodes, net2.nodes)
-
+```
+```
 shell> cat evsim.txt
 g1c g2a 0.7028744190938785
 g1c g2b 0.9503056260723859
@@ -79,7 +89,13 @@ res = dynawave(net1.G, net2.G, R, 0.5);
 `res.f` contains the alignment between the two networks. We construct the aligned node pairs as follows.
 
 ```julia
-hcat(net1.nodes, net2.nodes[res.f])
+nodepairs = hcat(net1.nodes, net2.nodes[res.f])
+```
+
+We can write the alignment to file as follows.
+
+```julia
+writedlm("exalnfile.txt", nodepairs)
 ```
 
 # Aligning two static networks
@@ -92,7 +108,8 @@ function to load it.
 ```julia
 net1 = readgw("ex1.gw")
 net2 = readgw("ex2.gw")
-
+```
+```
 shell> cat ex1.gw
 LEDA.GRAPH
 void
@@ -137,7 +154,8 @@ are also stored in a different format and we use the `readdlm` function to load 
 
 ```julia
 R = readdlm("exgdvsim.txt", header=true)[1]
-
+```
+```
 shell> cat exgdvsim.txt
 5 6
 0.972933 0.93658 0.972933 0.925753 0.935525 0.903174
@@ -156,5 +174,11 @@ res = wave(net1.G, net2.G, R, 0.5);
 Same as before, `res.f` contains the alignment between the two networks and we construct the aligned node pairs as follows.
 
 ```julia
-hcat(net1.nodes, net2.nodes[res.f])
+nodepairs = hcat(net1.nodes, net2.nodes[res.f])
+```
+
+We can write the alignment to file as follows.
+
+```julia
+writedlm("exalnfile.txt", nodepairs)
 ```

@@ -17,17 +17,33 @@ type WaveModel{E,T<:AbstractMatrix,M<:NetalignMeasure}
 
     function WaveModel{E,T,M}(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                        D::AbstractMatrix,
-                       ecmeasure::NetalignMeasure,
+                       meas::NetalignMeasure,
                        seeds) where {E,T,M}
         new(G1,G2, D,
             zeros(Int,size(G1,1)),
-            ecmeasure,seeds,0.0,0.0,0.0,Float64[])
+            meas,seeds,0.0,0.0,0.0,Float64[])
     end
 end
 function WaveModel(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
-                   ecmeasure::NetalignMeasure, seeds = zeros(Int,(0,0)))
-    D = wavescorematrix(ecmeasure)
-    WaveModel{eltype(G1),typeof(D),typeof(ecmeasure)}(G1,G2,D,ecmeasure,seeds)
+                   meas::NetalignMeasure, seeds = zeros(Int,(0,0)))
+    D = wavescorematrix(meas)
+    WaveModel{eltype(G1),typeof(D),typeof(meas)}(G1,G2,D,meas,seeds)
+end
+
+function wavestep!(M::WaveModel,i::Int,j::Int,
+                   L1::Set{Int},L2::Set{Int},
+                   adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int})
+    adj1 = adjnodes(M.G1,i)
+    adj2 = adjnodes(M.G2,j)
+    M.f[i] = j
+    push!(L1,i)
+    push!(L2,j)
+    adjcount1[adj1] += 1
+    adjcount2[adj2] += 1
+    # add vote to adjacent nodes of both networks
+    Ddiff = wavescorevote(M.phi, i,j, adj1,adj2, adjcount1,adjcount2)
+    M.D[adj1,adj2] += Ddiff
+    adj1,adj2,Ddiff
 end
 
 function initializewave!(M::WaveModel;approxobjval=false)
@@ -41,16 +57,7 @@ function initializewave!(M::WaveModel;approxobjval=false)
     for k = 1:size(M.seeds,1)
         i = M.seeds[k,1]
         j = M.seeds[k,2]
-        adj1 = adjnodes(M.G1,i)
-        adj2 = adjnodes(M.G2,j)
-        M.f[i] = j
-        push!(L1,i)
-        push!(L2,j)
-        adjcount1[adj1] += 1
-        adjcount2[adj2] += 1
-        # add vote to adjacent nodes of both networks
-        Ddiff = wavescorevote(M.phi, i,j, adj1,adj2, adjcount1,adjcount2)
-        M.D[adj1,adj2] += Ddiff
+        adj1,adj2,Ddiff = wavestep!(M,i,j,L1,L2,adjcount1,adjcount2)
 
         if approxobjval
             M.objval += sum(Ddiff[findin(adj1, L1), findin(adj2, L2)])
@@ -111,6 +118,7 @@ function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,L1::Set{Int,},L2::Se
             Q[(ip,jp)] = -M.D[ip,jp]
         end
     end
+    Q
 end
 
 function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-size(M.seeds,1)),
@@ -125,14 +133,7 @@ function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-size(M.seeds,1)),
     iter = 1
     while iter <= maxiter && !isempty(Q)
         i,j = dequeue!(Q)
-        adj1 = adjnodes(M.G1,i)
-        adj2 = adjnodes(M.G2,j)
-        M.f[i] = j
-        push!(L1,i)
-        push!(L2,j)
-        # add vote to adjacent nodes of both networks
-        Ddiff = wavescorevote(M.phi, i,j, adj1,adj2, adjcount1,adjcount2)
-        M.D[adj1,adj2] += Ddiff
+        adj1,adj2,Ddiff = wavestep!(M,i,j,L1,L2,adjcount1,adjcount2)
 
         if approxobjval # not really the obj. val. but it gives you an idea
             a1 = collect(intersect(adj1,L1))
@@ -152,7 +153,6 @@ function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-size(M.seeds,1)),
         if approxobjval
             print(", approx. of objective value: $(M.objval)")
         end
-        flush(STDOUT)
         iter += 1
     end
     if approxobjval
