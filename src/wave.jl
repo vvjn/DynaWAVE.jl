@@ -1,3 +1,4 @@
+using NetalignUtils
 using DataStructures
 using UnicodePlots
 
@@ -27,14 +28,14 @@ end
     WaveModel(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
               meas::NetalignMeasure, seeds = [])
 
-Creates a problem object given two networks to align by
-optimizing a `NetalignMeasure`. See [`align!`](@ref) on how perform
-the alignment.
+Internal function that creates a problem structure given two networks
+(static or dynamic) to align by and `NetalignMeasure` to optimize
+over. See [`align!`](@ref) on how perform the alignment.
 
 # Arguments
 - `G1`,`G2` : input networks in sparse matrix format
 - `meas` : `NetalignMeasure` object (see
-  [NetalignMeasures.jl](https://github.com/vvjn/NetalignMeasures.jl)). WaveModel
+  [NetalignMeasures.jl](https://github.com/vvjn/NetalignMeasures.jl)). `WaveModel`
   can optimize the DWEC measure (`DWECMeasure`), a dynamic network
   alignment measure and the WEC measure (`WECMeasure`), a static
   network alignment method.
@@ -83,54 +84,20 @@ end
 
 function buildpriorityqueue(M::WaveModel,L1::Set{Int},L2::Set{Int})
     n1 = size(M.G1,1); n2 = size(M.G2,1)
-    Q = PriorityQueue{Tuple{Int,Int},Float64}()
-    if issparse(M.D)
-        I,J,V = findnz(M.D)
-        for u = 1:length(V)
-            i = I[u]
-            j = J[u]
-            if !(i in L1 || j in L2)
-                enqueue!(Q, (i,j), -V[u])
-            end
-        end
-    else
-        for i = 1:n1, j = 1:n2
-            if !(i in L1 || j in L2)
-                enqueue!(Q, (i,j), -M.D[i,j])
-            end
-        end
-    end
-    Q
+    kv = [((i,j),-M.D[i,j]) for i=1:n1, j=1:n2 if !(i in L1 || j in L2)]
+    PriorityQueue(kv)
 end
 
-function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,L1::Set{Int,},L2::Set{Int},
-                              i::Int,j::Int,
+function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,
+                              L1::Set{Int,},L2::Set{Int}, i::Int,j::Int,
                               adj1::AbstractVector{Int},adj2::AbstractVector{Int})
     n1 = size(M.G1,1); n2 = size(M.G2,1)
     # remove cross node pairs containing i or j
-    if issparse(M.D)
-        for ip = setdiff(1:n1,L1)
-            if haskey(Q,(ip,j)) dequeue!(Q,(ip,j)) end
-        end
-        for jp = setdiff(1:n2,L2)
-            if haskey(Q,(i,jp)) dequeue!(Q,(i,jp)) end
-        end
-    else
-        for ip = setdiff(1:n1,L1); dequeue!(Q,(ip,j)); end
-        for jp = setdiff(1:n2,L2); dequeue!(Q,(i,jp)); end
-    end
+    for ip = setdiff(1:n1,L1); dequeue!(Q,(ip,j)); end
+    for jp = setdiff(1:n2,L2); dequeue!(Q,(i,jp)); end
     # update priority queue with the new votes
-    if issparse(M.D)
-        Ip = setdiff(adj1,L1)
-        Jp = setdiff(adj2,L2)
-        Vp = -M.D[Ip,Jp]
-        for u = 1:length(Ip), v = 1:length(Jp)
-            Q[(Ip[u],Jp[v])] = Vp[u,v]
-        end
-    else
-        for ip in setdiff(adj1,L1), jp in setdiff(adj2,L2)
-            Q[(ip,jp)] = -M.D[ip,jp]
-        end
+    for ip in setdiff(adj1,L1), jp in setdiff(adj2,L2)
+        Q[(ip,jp)] = -M.D[ip,jp]
     end
     Q
 end
@@ -139,7 +106,7 @@ end
     align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-length(M.seeds)),
                 verbose=false) -> f
 
-Performs alignment with respect to the parameters in `WaveModel`.
+Internal function that performs alignment with respect to the parameters in `WaveModel`.
 
 # Arguments
 - `maxiter` : Stop aligning after `maxiter` iterations. Each iteration
@@ -205,18 +172,23 @@ Proceedings of the Workshop on Algorithms in Bioinformatics (WABI),
 Atlanta, GA, USA, September 10-12, 2015, pages 16-39).
 
 # Arguments
-- `G1`,`G2` : input networks in sparse matrix format
-- `S` : node similarities beween the two networks
-- `beta` : weighs between edge and node conservation, `beta=1.0` weighs
+- `G1`,`G2` : Input networks in sparse matrix format.
+- `S` : Node similarities beween the two networks.
+- `beta` : Weighs between edge and node conservation, `beta=1.0` weighs
     edge conservation highly while `beta=0.0` weighs node conservation highly
-- `seeds` : seed aligned node pairs. For example, if we know that the
+- `seeds` : Seed aligned node pairs. For example, if we know that the
     3rd node in the first network is aligned to the 7th node in the
     second network, and the 5th node in the first network is aligned to the
-    9th node in the second network, then we will set `seeds = [(3,7), (5,9)]`
+    9th node in the second network, then we will set `seeds = [(3,7), (5,9)]`.
 
 # Keyword arguments
 - `skipalign` : Don't align; just return the alignment details in [`WaveModel`](@ref).
 - `details` : Returns `M`, the [`WaveModel`](@ref).
+
+# Output
+- `f` : Alignment, i.e. node mapping from `G1` to `G2`. `f[i] describes
+    node pair `nodes1[i], nodes2[f[i]]`, where `nodes1` and `nodes2` are
+    the vectors of node names corresponding to `G1` and `G2` respectively.    
 """
 function wave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
               S::AbstractMatrix, beta=0.5,
@@ -251,6 +223,11 @@ networks by running the DynaWAVE algorithm.
 # Keyword arguments
 - `skipalign` : Don't align; just return the alignment details in [`WaveModel`](@ref).
 - `details` : Returns `M`, the [`WaveModel`](@ref).
+
+# Output
+- `f` : Alignment, i.e. node mapping from `G1` to `G2`. `f[i] describes
+    node pair `nodes1[i], nodes2[f[i]]`, where `nodes1` and `nodes2` are
+    the vectors of node names corresponding to `G1` and `G2` respectively.    
 """
 function dynawave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                   S::AbstractMatrix, beta=0.5,
@@ -270,19 +247,22 @@ end
                       seeds=[], details=false,method=dynawave) -> f [, M]
 
 Given two networks and node similarities between them, before aligning
-using either [`dynawave`](@ref) and [`wave`](@ref), this shuffles each
+using either [`dynawave`](@ref) or [`wave`](@ref), this shuffles each
 input network independently before passing the networks to `dynawave`
-or `wave`. This is to get rid of node order biases when you have the
-same node set; i.e., if both networks have the same ordered array of
-nodes then the permutation 1:n is much more likely to be the resultant
-alignment than not. This is for use in evaluation, where biases like
-this tend to show much better results that is actually possible with a
-particular method. We obviously do not want biases like these during evaluation.
-For example, when aligning a network to itself evaluate a network alignment
-method, the node order of the two networks will be the same. This
-results in the network alignment method "knowing" the true node mapping,
-and often producing alignments of much higher quality that is actually
-possible with the method were the true node mapping not known.    
+or `wave`. This is to remove node order biases when the two networks
+being aligned have similar node sets with similar node orderings. This
+is for use in evaluation, where biases like this tend to show much
+better results that is actually possible with a particular method. We
+obviously do not want biases like these during evaluation.
+
+For example, when aligning a network to itself evaluate a network
+alignment method, the node order of the two networks will be the same
+and the node set will be the same. This results in the network
+alignment method "knowing" the true node mapping, and often producing
+alignments of much higher quality that is actually possible with the
+method were the true node mapping not known. This method randomizes
+(shuffles) the node order before handing it to `dynawave` or `wave`
+and then returns the deshuffled alignment.
 
 # Arguments
 - `method` : If `method = dynawave`, run the DynaWAVE algorithm after
@@ -291,7 +271,7 @@ possible with the method were the true node mapping not known.
 - See [`dynawave`](@ref) and [`wave`](@ref) for the other arguments.
     
 # Output
-- `f` : The resulting alignment has the correct node order with respect to the input `G1` and `G2` networks; i.e., it is "unshuffled".    
+- `f` : The resulting alignment has the correct node order with respect to the input `G1` and `G2` networks; i.e., it is "deshuffled".    
 """    
 function shufflealign(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                       S::AbstractMatrix, beta::Float64,

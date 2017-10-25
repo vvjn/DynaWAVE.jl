@@ -4,7 +4,8 @@ makedocs(
     format = :html,
     sitename = "DynaWAVE",
     pages = [
-        "index.md", "Functions" => "funs.md"
+             "index.md", "Functions" => "funs.md",
+             "Internals" => "internals.md"
     ]
 )
 

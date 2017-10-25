@@ -5,24 +5,34 @@ networks. Dynamic networks are networks that evolve over time. Until
 recently, existing methods for network alignment were limited to being
 able to only align static networks. However, most complex real-world
 systems evolve over time and should thus be modeled as dynamic
-networks. Thus, DynaMAGNA++ was introduced as a proof-of-concept
+networks. Thus, [DynaMAGNA++](https://www3.nd.edu/~cone/DynaMAGNA++/)
+[1] was introduced as a proof-of-concept
 method for aligning dynamic networks. However, DynaMAGNA++ does not
-necessarily scale well to larger networks. DynaWAVE, on the other
-hand, scales well to larger networks in terms of alignment quality and
-runtime compared to DynaMAGNA++. While DynaWAVE is less accurate but
-faster than DynaMAGNA++ for smaller networks, DynaWAVE is more
-accurate and faster than DynaMAGNA++ for larger networks. An example
-of an application domain where DynaWAVE and DynaMAGNA++ are useful is
-computational biology - DynaWAVE can be used for alignment of protein
-interaction networks that evolve over time.
+necessarily scale well to larger networks.
+
+DynaWAVE, on the other hand, scales well to larger networks in terms
+of alignment quality and runtime compared to DynaMAGNA++. While
+DynaWAVE is less accurate but faster than DynaMAGNA++ for smaller
+networks, DynaWAVE is more accurate and faster than DynaMAGNA++ for
+larger networks. An example of an application domain where DynaWAVE
+and DynaMAGNA++ are useful is computational biology - DynaWAVE can be
+used for alignment of protein interaction networks that evolve over
+time.
 
 DynaWAVE is an extension of WAVE. While both WAVE and DynaWAVE
 optimize edge as well as node conservation across the aligned
 networks, WAVE conserves static edges and similarity between static
 node neighborhoods, while DynaWAVE conserves dynamic edges (events)
 and similarity between evolving node neighborhoods. WAVE appears in
-the following publication: Yihan Sun, Joseph Crawford, Jie Tang, and
-Tijana Milenkovic, Simultaneous Optimization of Both Node and Edge
+the following publication [2].
+
+[1] Alignment of dynamic networks,
+V. Vijayan,  D. Critchlow, and  T. Milenković,
+Bioinformatics, Volume 33, Issue 14, 15 July 2017, Pages i180–i189,
+(https://doi.org/10.1093/bioinformatics/btx246).
+
+[2] Yihan Sun, Joseph Crawford, Jie Tang, and
+Tijana Milenković, Simultaneous Optimization of Both Node and Edge
 Conservation in Network Alignment via WAVE, in Proceedings of the
 Workshop on Algorithms in Bioinformatics (WABI), Atlanta, GA, USA,
 September 10-12, 2015, pages 16-39.
@@ -108,13 +118,13 @@ g1d g2d 0.24794887906050478
 Finally, we align the two networks using the node similarities.
 
 ```julia
-res = dynawave(net1.G, net2.G, R, 0.5);
+f = dynawave(net1.G, net2.G, R, 0.5);
 ```
 
-`res.f` contains the alignment between the two networks. We construct the aligned node pairs as follows.
+`f` contains the alignment between the two networks. We construct the aligned node pairs as follows.
 
 ```julia
-nodepairs = hcat(net1.nodes, net2.nodes[res.f])
+nodepairs = hcat(net1.nodes, net2.nodes[f])
 ```
 
 We can write the alignment to file as follows.
@@ -195,13 +205,13 @@ shell> cat exgdvsim.txt
 Finally, we align the two networks using the node similarities.
 
 ```julia
-res = wave(net1.G, net2.G, R, 0.5);
+f = wave(net1.G, net2.G, R, 0.5);
 ```
 
-Same as before, `res.f` contains the alignment between the two networks and we construct the aligned node pairs as follows.
+Same as before, `f` contains the alignment between the two networks and we construct the aligned node pairs as follows.
 
 ```julia
-nodepairs = hcat(net1.nodes, net2.nodes[res.f])
+nodepairs = hcat(net1.nodes, net2.nodes[f])
 ```
 
 We can write the alignment to file as follows.
