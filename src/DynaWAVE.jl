@@ -4,6 +4,8 @@ module DynaWAVE
 
 using NetalignMeasures
 
+export Events
+
 include("wave.jl")
 include("measures.jl")
 

@@ -189,7 +189,7 @@ function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-length(M.seeds)),
     M.objval = score(x)
     M.es = x
     println("\nObjective value: $(M.objval)")
-    f
+    M.f
 end
 
 """
@@ -224,7 +224,7 @@ function wave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
     M = WaveModel(G1,G2, ConvexCombMeasure(WECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
     if !skipalign
-        align!(M,verbose=false,details=details)
+        align!(M,verbose=false)
     else
         M.f,M
     end
@@ -258,7 +258,7 @@ function dynawave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
     M = WaveModel(G1,G2, ConvexCombMeasure(DWECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
     if !skipalign
-        align!(M,verbose=false,details=details)
+        align!(M,verbose=false)
     else
         M.f,M
     end
