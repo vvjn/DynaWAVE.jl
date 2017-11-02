@@ -6,7 +6,7 @@ function wavescorevote(m::NullMeasure,
                        adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int})
     0.0
 end
-wavescorematrix(m::NullMeasure) = 0.0
+wavescorematrix(m::NullMeasure) = SparseMatrixLIL(spzeros(Float64,size(m.G1,1),size(m.G2,1)))
 
 function wavescorevote(m::ConvexCombMeasure,
                        i::Int,j::Int,
@@ -68,17 +68,32 @@ function wavescorevote(meas::NetalMeasure,
     m = length(adj1)
     n = length(adj2)
     R = Matrix{Float64}(m,n)
-    for j = 1:n, i = 1:m
-        u = adj1[i]
-        v = adj2[j]
+    for rj = 1:n, ri = 1:m
+        u = adj1[ri]
+        v = adj2[rj]
         c1 = adjcount1[u] * meas.dep1[u]
         c2 = adjcount2[v] * meas.dep2[v]
         cp1 = c1 - meas.dep1[u]
         cp2 = c2 - meas.dep2[v]
-        R[i,j] = min(meas.expci1[u]-c1,meas.expci2[v]-c2)/max(meas.maxdeg1,meas.maxdeg2) -
+        R[ri,rj] = min(meas.expci1[u]-c1,meas.expci2[v]-c2)/max(meas.maxdeg1,meas.maxdeg2) -
                  min(meas.expci1[u]-cp1,meas.expci2[v]-cp2)/max(meas.maxdeg1,meas.maxdeg2) + 1
     end
     R
 end
 wavescorematrix(m::NetalMeasure) = expci(m.G1,m.G2)
 
+function wavescorevote(meas::GhostMeasure,
+                       i::Int,j::Int,
+                       adj1::AbstractVector{Int},adj2::AbstractVector{Int},
+                       adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int})
+    m = length(adj1)
+    n = length(adj2)
+    R = Matrix{Float64}(m,n)
+    for rj = 1:n, ri = 1:m
+        u = adj1[ri]
+        v = adj2[rj]
+        R[ri,rj] = score(meas, u, v)
+    end
+    (score(meas, i, j) .+ R) ./ 2
+end
+wavescorematrix(m::GhostMeasure) = SparseMatrixLIL(spzeros(Float64,size(m.G1,1),size(m.G2,1)))

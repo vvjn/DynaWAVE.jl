@@ -6,6 +6,7 @@ using NetalignMeasures
 
 export Events
 
+include("sparse.jl")
 include("wave.jl")
 include("measures.jl")
 

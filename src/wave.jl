@@ -12,7 +12,7 @@ type WaveModel{E,T<:AbstractMatrix,M<:NetalignMeasure}
     phi :: M # objective value
     seeds :: Vector{Tuple{Int,Int}} # initial seeds k x 2 int array
     objval :: Float64 # objective value
-    es
+    nas # :: NetalignScore
     history :: Vector{Float64} # approx. obj. val. at each iteration
 
     function WaveModel{E,T,M}(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
@@ -64,6 +64,7 @@ end
 
 function initializewave!(M::WaveModel;verbose=false)
     n1 = size(M.G1,1); n2 = size(M.G2,1)
+    Q = buildpriorityqueue(M)
     # adjcount[i] is the num. of times that a neighbor of i is aligned
     adjcount1 = zeros(Int,n1)
     adjcount2 = zeros(Int,n2)
@@ -73,19 +74,25 @@ function initializewave!(M::WaveModel;verbose=false)
     for k = 1:length(M.seeds)
         i,j = M.seeds[k]
         adj1,adj2,Ddiff = wavestep!(M,i,j,L1,L2,adjcount1,adjcount2)
+        updatepriorityqueue!(M,Q,L1,L2,i,j,adj1,adj2)
 
         if verbose
             M.objval += sum(Ddiff[findin(adj1, L1), findin(adj2, L2)])
             push!(M.history, M.objval)
         end
     end
-    (L1,L2,adjcount1,adjcount2)
+    (Q,L1,L2,adjcount1,adjcount2)
 end
 
-function buildpriorityqueue(M::WaveModel,L1::Set{Int},L2::Set{Int})
+function buildpriorityqueue(M::WaveModel)
     n1 = size(M.G1,1); n2 = size(M.G2,1)
-    kv = [((i,j),-M.D[i,j]) for i=1:n1, j=1:n2 if !(i in L1 || j in L2)]
-    PriorityQueue(kv)
+    if issparse(M.D)
+        I,J,V = findnz(M.D)
+        kv = (((i,j),-v) for (i,j,v) in zip(I,J,V))
+    else
+        kv = (((i,j),-M.D[i,j]) for i=1:n1, j=1:n2)
+    end
+    PriorityQueue{Tuple{Int,Int},Float64}(kv)
 end
 
 function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,
@@ -93,8 +100,13 @@ function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,
                               adj1::AbstractVector{Int},adj2::AbstractVector{Int})
     n1 = size(M.G1,1); n2 = size(M.G2,1)
     # remove cross node pairs containing i or j
-    for ip = setdiff(1:n1,L1); dequeue!(Q,(ip,j)); end
-    for jp = setdiff(1:n2,L2); dequeue!(Q,(i,jp)); end
+    if issparse(M.D)
+        for ip = setdiff(1:n1,L1); if haskey(Q,(ip,j)) dequeue!(Q,(ip,j)) end end
+        for jp = setdiff(1:n2,L2); if haskey(Q,(i,jp)) dequeue!(Q,(i,jp)) end end
+    else
+        for ip = setdiff(1:n1,L1); dequeue!(Q,(ip,j)) end
+        for jp = setdiff(1:n2,L2); dequeue!(Q,(i,jp)) end
+    end
     # update priority queue with the new votes
     for ip in setdiff(adj1,L1), jp in setdiff(adj2,L2)
         Q[(ip,jp)] = -M.D[ip,jp]
@@ -116,11 +128,10 @@ Internal function that performs alignment with respect to the parameters in `Wav
 function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-length(M.seeds)),
                 verbose=false)
     # intialize alignment using the seeds aligned pairs
-    L1,L2,adjcount1,adjcount2 = initializewave!(M,verbose=verbose)
+    Q,L1,L2,adjcount1,adjcount2 = initializewave!(M,verbose=verbose)
 
     # initialize priority queue
     println("Building priority queue")
-    Q = buildpriorityqueue(M,L1,L2)
 
     iter = 1
     while iter <= maxiter && !isempty(Q)
@@ -154,9 +165,9 @@ function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-length(M.seeds)),
     end
     x = measure(M.phi,M.f)
     M.objval = score(x)
-    M.es = x
+    M.nas = x
     println("\nObjective value: $(M.objval)")
-    M.f
+    alnfillrandom!(M.f,size(M.D,2)) # fill unfilled mappings randomly
 end
 
 """
@@ -188,18 +199,20 @@ Atlanta, GA, USA, September 10-12, 2015, pages 16-39).
 # Output
 - `f` : Alignment, i.e. node mapping from `G1` to `G2`. `f[i] describes
     node pair `nodes1[i], nodes2[f[i]]`, where `nodes1` and `nodes2` are
-    the vectors of node names corresponding to `G1` and `G2` respectively.    
+    the vectors of node names corresponding to `G1` and `G2` respectively.
 """
 function wave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
               S::AbstractMatrix, beta=0.5,
               seeds=Vector{Tuple{Int,Int}}();skipalign=false,details=false)
+    if typeof(S) <: SparseMatrixCSC
+        S = SparseMatrixLIL(S)
+    end
     M = WaveModel(G1,G2, ConvexCombMeasure(WECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
     if !skipalign
         align!(M,verbose=false)
-    else
-        M.f,M
     end
+    if details M.f,M else M.f end
 end
 
 """
@@ -227,18 +240,20 @@ networks by running the DynaWAVE algorithm.
 # Output
 - `f` : Alignment, i.e. node mapping from `G1` to `G2`. `f[i] describes
     node pair `nodes1[i], nodes2[f[i]]`, where `nodes1` and `nodes2` are
-    the vectors of node names corresponding to `G1` and `G2` respectively.    
+    the vectors of node names corresponding to `G1` and `G2` respectively.
 """
 function dynawave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                   S::AbstractMatrix, beta=0.5,
                   seeds=Vector{Tuple{Int,Int}}();skipalign=false,details=false)
+    if typeof(S) <: SparseMatrixCSC
+        S = SparseMatrixLIL(S)
+    end
     M = WaveModel(G1,G2, ConvexCombMeasure(DWECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
     if !skipalign
         align!(M,verbose=false)
-    else
-        M.f,M
     end
+    if details M.f,M else M.f end
 end
 
 """
@@ -269,10 +284,10 @@ and then returns the deshuffled alignment.
     shuffling the networks. If `method = wave`, run the WAVE algorithm
     after shuffling the networks.
 - See [`dynawave`](@ref) and [`wave`](@ref) for the other arguments.
-    
+
 # Output
-- `f` : The resulting alignment has the correct node order with respect to the input `G1` and `G2` networks; i.e., it is "deshuffled".    
-"""    
+- `f` : The resulting alignment has the correct node order with respect to the input `G1` and `G2` networks; i.e., it is "deshuffled".
+"""
 function shufflealign(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                       S::AbstractMatrix, beta::Float64,
                       seeds=Vector{Tuple{Int,Int}}();
