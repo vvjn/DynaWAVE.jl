@@ -307,6 +307,6 @@ function shufflealign(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
     N.f = p2[M.f][q1]
     x = measure(N.phi,N.f)
     N.objval = score(x)
-    N.es = x
+    N.nas = x
     if details N.f,N else N.f end
 end

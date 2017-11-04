@@ -406,10 +406,8 @@ We can calculate node correctness as follows.
 
 ``` julia
 nc_dynamic = nodecorrectness(fdynamic, t1.nodes, t2.nodes)
-# 0.895
 
 nc_static = nodecorrectness(fstatic, s1.nodes, s2.nodes)
-# 0.939
 ```
 
 Finally, above, we aligned the yeast dynamic network to the same network with
@@ -419,5 +417,4 @@ Finally, above, we aligned the yeast dynamic network to the same network with
 S = NodeSimMeasure(:pcagdvs,gdv1,gdv1).S
 f = dynawave(t1.G, t1.G, S, 0.5)
 nodecorrectness(f, t1.nodes, t1.nodes)
-# 0.971
 ```

@@ -22,17 +22,17 @@ function wavescorevote(meas::NodeSimMeasure,
                        i::Int,j::Int,
                        adj1::AbstractVector{Int},adj2::AbstractVector{Int},
                        adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int})
-    meas.S[i,j]
+    meas.S[i,j] ./ dim(meas,1)
 end
-wavescorematrix(m::NodeSimMeasure) = copy(m.S)
+wavescorematrix(m::NodeSimMeasure) = m.S ./ dim(m,1)
 
 function wavescorevote(meas::WECMeasure,
                        i::Int,j::Int,
                        adj1::AbstractVector{Int},adj2::AbstractVector{Int},
                        adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int})
-    meas.S[adj1,adj2]
+    (meas.S[i,j] .+ meas.S[adj1,adj2]) ./ min(nnz(meas.G1),nnz(meas.G2))
 end
-wavescorematrix(m::WECMeasure) = copy(m.S)
+wavescorematrix(m::WECMeasure) = m.S ./ min(nnz(m.G1),nnz(m.G2))
 
 function local_cet_ncet(meas::DWECMeasure,
                                    i::Int,j::Int,
@@ -53,10 +53,9 @@ function wavescorevote(meas::DWECMeasure,
                        adj1::AbstractVector{Int},adj2::AbstractVector{Int},
                        adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int})
     TC,TN = local_cet_ncet(meas, i,j, adj1,adj2)
-    activitynorm = let TS = TC+TN; isempty(TS) ? -Inf : maximum(TS) end
-    TC .* meas.S[adj1,adj2] ./ activitynorm
+    TC .* (meas.S[i,j] .+ meas.S[adj1,adj2]) ./ min(meas.activitysum1,meas.activitysum2)
 end
-wavescorematrix(m::DWECMeasure) = copy(m.S)
+wavescorematrix(m::DWECMeasure) = m.S .* (meannodeactivity(m.G1) + meannodeactivity(m.G2)) ./ min(m.activitysum1,m.activitysum2)
 
 # Initial matrix = alpha min(G1.expci[i],G2.expci[j])/max(G1.maxdeg,G2.maxdeg) + (1-alpha) S[i,j]
 # c1[adj1] += g1.dep[i]; c2[adj2] += g2.dep[j];
