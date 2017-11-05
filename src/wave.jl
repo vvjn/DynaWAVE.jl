@@ -46,22 +46,6 @@ function WaveModel(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
     WaveModel{eltype(G1),typeof(D),typeof(meas)}(G1,G2,D,meas,seeds)
 end
 
-function wavestep!(M::WaveModel,i::Int,j::Int,
-                   L1::Set{Int},L2::Set{Int},
-                   adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int})
-    adj1 = adjnodes(M.G1,i)
-    adj2 = adjnodes(M.G2,j)
-    M.f[i] = j
-    push!(L1,i)
-    push!(L2,j)
-    adjcount1[adj1] += 1
-    adjcount2[adj2] += 1
-    # add vote to adjacent nodes of both networks
-    Ddiff = wavescorevote(M.phi, i,j, adj1,adj2, adjcount1,adjcount2)
-    M.D[adj1,adj2] += Ddiff
-    adj1,adj2,Ddiff
-end
-
 function initializewave!(M::WaveModel;verbose=false)
     n1 = size(M.G1,1); n2 = size(M.G2,1)
     Q = buildpriorityqueue(M)
@@ -73,13 +57,7 @@ function initializewave!(M::WaveModel;verbose=false)
     L2 = Set{Int}() # nodes already aligned
     for k = 1:length(M.seeds)
         i,j = M.seeds[k]
-        adj1,adj2,Ddiff = wavestep!(M,i,j,L1,L2,adjcount1,adjcount2)
-        updatepriorityqueue!(M,Q,L1,L2,i,j,adj1,adj2)
-
-        if verbose
-            M.objval += sum(Ddiff[findin(adj1, L1), findin(adj2, L2)])
-            push!(M.history, M.objval)
-        end
+        wavestep!(M,i,j,L1,L2,adjcount1,adjcount2,Q,verbose)
     end
     (Q,L1,L2,adjcount1,adjcount2)
 end
@@ -114,6 +92,28 @@ function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,
     Q
 end
 
+function wavestep!(M::WaveModel,i::Int,j::Int,
+                   L1::Set{Int},L2::Set{Int},
+                   adjcount1::AbstractVector{Int},adjcount2::AbstractVector{Int},
+                   Q::PriorityQueue, verbose)
+    if verbose # not really the obj. val. but it gives you an idea
+        M.objval += M.D[i,j]
+        push!(M.history, M.objval)
+    end
+
+    adj1 = adjnodes(M.G1,i)
+    adj2 = adjnodes(M.G2,j)
+    M.f[i] = j
+    push!(L1,i)
+    push!(L2,j)
+    adjcount1[adj1] += 1
+    adjcount2[adj2] += 1
+    # add vote to adjacent nodes of both networks
+    Ddiff = wavescorevote(M.phi, i,j, adj1,adj2, adjcount1,adjcount2)
+    M.D[adj1,adj2] += Ddiff
+    updatepriorityqueue!(M,Q,L1,L2,i,j,adj1,adj2)
+end
+
 """
     align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-length(M.seeds)),
                 verbose=false) -> f
@@ -136,21 +136,7 @@ function align!(M::WaveModel; maxiter::Integer=(size(M.G1,1)-length(M.seeds)),
     iter = 1
     while iter <= maxiter && !isempty(Q)
         i,j = dequeue!(Q)
-        adj1,adj2,Ddiff = wavestep!(M,i,j,L1,L2,adjcount1,adjcount2)
-
-        if verbose # not really the obj. val. but it gives you an idea
-            a1 = collect(intersect(adj1,L1))
-            a2 = M.f[a1]
-            aix = findin(a2,intersect(adj2,L2))
-            a1 = a1[aix]
-            a2 = a2[aix]
-            M.objval += sum(Ddiff[sub2ind(size(Ddiff),findin(adj1,a1),
-                                          findin(adj2,a2))])/min(nnz(M.G1),nnz(M.G2))
-            M.objval += M.D[i,M.f[i]]/min(nnz(M.G1),nnz(M.G2))
-            push!(M.history, M.objval)
-        end
-
-        updatepriorityqueue!(M,Q,L1,L2,i,j,adj1,adj2)
+        wavestep!(M,i,j,L1,L2,adjcount1,adjcount2,Q,verbose)
 
         print("\rIteration $iter/$maxiter")
         if verbose
@@ -203,14 +189,14 @@ Atlanta, GA, USA, September 10-12, 2015, pages 16-39).
 """
 function wave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
               S::AbstractMatrix, beta=0.5,
-              seeds=Vector{Tuple{Int,Int}}();skipalign=false,details=false)
+              seeds=Vector{Tuple{Int,Int}}();skipalign=false,details=false,verbose=false)
     if typeof(S) <: SparseMatrixCSC
         S = SparseMatrixLIL(S)
     end
     M = WaveModel(G1,G2, ConvexCombMeasure(WECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
     if !skipalign
-        align!(M,verbose=false)
+        align!(M,verbose=verbose)
     end
     if details M.f,M else M.f end
 end
@@ -244,14 +230,14 @@ networks by running the DynaWAVE algorithm.
 """
 function dynawave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                   S::AbstractMatrix, beta=0.5,
-                  seeds=Vector{Tuple{Int,Int}}();skipalign=false,details=false)
+                  seeds=Vector{Tuple{Int,Int}}();skipalign=false,details=false,verbose=false)
     if typeof(S) <: SparseMatrixCSC
         S = SparseMatrixLIL(S)
     end
     M = WaveModel(G1,G2, ConvexCombMeasure(DWECMeasure(G1,G2,S),
                                            NodeSimMeasure(S),beta),seeds)
     if !skipalign
-        align!(M,verbose=false)
+        align!(M,verbose=verbose)
     end
     if details M.f,M else M.f end
 end
