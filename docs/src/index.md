@@ -31,7 +31,7 @@ networks using DynaWAVE, and how to align static networks using WAVE.
 
 [1] Alignment of dynamic networks, V. Vijayan, D. Critchlow, and
 T. Milenković, Bioinformatics, Volume 33, Issue 14, 15 July 2017,
-Pages i180–i189, (https://doi.org/10.1093/bioinformatics/btx246).
+Pages i180–i189, (<https://doi.org/10.1093/bioinformatics/btx246>).
 
 [2] Aligning dynamic networks with DynaWAVE, V. Vijayan and
 T. Milenković (2017), under revision.
@@ -40,18 +40,20 @@ T. Milenković (2017), under revision.
 Network Alignment via WAVE, Y. Sun, J. Crawford, J. Tang, and
 T. Milenković, in Proceedings of the Workshop on Algorithms in
 Bioinformatics (WABI), Atlanta, GA, USA, September 10-12, 2015, pages
-16-39.
+16-39 (<https://doi.org/10.1007/978-3-662-48221-6_2>).
 
 [4] The post-genomic era of biological network alignment, EURASIP
 Journal on Bioinformatics and Systems Biology, December 2015, 2015:3,
-F. E. Faisal, L. Meng, J. Crawford, and T. Milenković.
+F. E. Faisal, L. Meng, J. Crawford, and T. Milenković (<https://doi.org/10.1186/s13637-015-0022-9>).
 
 # Installation
 
 DynaWAVE requires [Julia 0.6](https://julialang.org/).
 DynaWAVE can be installed by going to the base directory of this
 software and running `julia install_dynawave.jl` in the command-line.
-Following this, we can start `julia` and use the DynaWAVE module.
+After this, we can start `julia` and use the DynaWAVE module.
+To follow the instructions below more easily, start julia in the
+examples/ directory.
 
 We load the `DynaWAVE` module to align networks, as well as the `NetalignUtils` and
 `NetalignMeasures` modules to read network files and run  related functions.
@@ -185,7 +187,7 @@ nc = mean(net1.nodes .== net2.nodes[f])
 [5] Exploring the structure and function of temporal networks with
 dynamic graphlets, Y. Hulovatyy,  H. Chen, and  T. Milenković,
 Bioinformatics, Volume 31, Issue 12, 15 June 2015, Pages i171–i180,
-(https://doi.org/10.1093/bioinformatics/btv227).
+(<https://doi.org/10.1093/bioinformatics/btv227>).
 
 ## Using BLAST E-values
 
@@ -199,7 +201,9 @@ yeast networks as in the above sub-section.
 E = readevalues("yeastlc_yeastlc_evalues.txt", net1.nodes, net2.nodes)
 ```
 
-Then, we convert the E-values to node similarities.
+Then, we convert the E-values to node similarities. This is done by
+converting each E-value to -log(E-value), and then dividing the
+resulting values with the maximum.
 
 ``` julia
 S = NodeSimMeasure(:evalues, E).S
@@ -209,6 +213,81 @@ Finally, we align the two networks.
 
 ``` julia
 f = dynawave(net1.G, net2.G, S)
+```
+
+## Creating network instances from network models
+
+We can create random network instances from three network models as in
+the DynaWAVE paper. We create a random instance of a 1000-node dynamic
+network using the GEO-GD network model, with parameter $p = 0.3$, and
+linear node arrival. We let the timespan range from 0 to 30 seconds,
+initializing the network with a 5-node clique. 
+
+```julia
+G = rand(GEOGD(0.3, 1, :linear), 1000, 30, 5)
+```
+
+Here, we create a random instance of a 1000-node dynamic
+network using the SF-GD network model, with parameters $p = 0.3, q = 0.7$, and
+exponential node arrival. We let the timespan range from 0 to 30 seconds,
+initializing the network with a 5-node clique. 
+
+```julia
+G = rand(SFGD(0.3, 0.7, :exp), 1000, 30, 5)
+```
+
+Here, we create a random instance of a 1000-node dynamic
+network using the SNE network model, with parameters $\lambda =
+0.032, \alpha = 0.8, \beta = 0.002$, and
+quadratic node arrival. We let the timespan range from 0 to 30 seconds,
+initializing the network with a 5-node clique. 
+
+```julia
+G = rand(SocialNE(0.032, 0.8, 0.002, :quad), 1000, 30, 5)
+```
+
+## Adding noise to a dynamic network
+
+Given a dynamic network, here we add noise to the network. There are
+two methods we use to add noise to a dynamic network: a strict version
+(`strict_events_shuffle`) that only changes the event times in the network (from page 15/30 of
+[6]), and a non-strict version (`links_shuffle`) that change both event times and links
+between nodes in the network (from page 16/39 of [6]).
+
+Here, we add 30% noise to network `G` using the strict version.
+
+```julia
+net1 = readeventlist("yeastlc_original_tw_1_1.dy")
+G = net1.G
+
+G30 = strict_events_shuffle(G, 0.30)
+```
+
+Here, we add 30% noise to network `G` using the non-strict version.
+
+```julia
+net1 = readeventlist("yeastlc_original_tw_1_1.dy")
+G = net1.G
+
+G30 = links_shuffle(G, 0.30)
+```
+
+[6] Modern temporal network theory: a colloquium, Petter Holme,
+European Physical Journal B (2015),
+(<https://doi.org/10.1140/epjb/e2015-60657-4>).
+
+## Converting a dynamic network to a static network
+
+We can flatten a dynamic network to a static network as follows. There
+is an edge between two nodes in the static network if there is atleast
+one interaction (dynamic edge) between two nodes in the dynamic
+network.
+
+```julia
+net1 = readeventlist("yeastlc_original_tw_1_1.dy")
+G = net1.G
+
+Gstatic = flatten(G)
 ```
 
 # Aligning two static networks
