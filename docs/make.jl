@@ -5,7 +5,7 @@ makedocs(
     sitename = "DynaWAVE",
     pages = [
              "index.md", "Functions" => "funs.md",
-             "Internals" => "internals.md"
+             "Internals" => "internals.md", "Command-line tool" => "cmd.md"
     ]
 )
 

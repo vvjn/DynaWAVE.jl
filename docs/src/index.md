@@ -53,7 +53,7 @@ DynaWAVE can be installed by going to the base directory of this
 software and running `julia install_dynawave.jl` in the command-line.
 After this, we can start `julia` and use the DynaWAVE module.
 To follow the instructions below more easily, start julia in the
-examples/ directory.
+`examples/` directory.
 
 We load the `DynaWAVE` module to align networks, as well as the `NetalignUtils` and
 `NetalignMeasures` modules to read network files and run  related functions.
@@ -142,7 +142,9 @@ writedlm("exalnfile.txt", nodepairs)
 
 ```
 
-## Using dynamic GDVs
+## Computing node similarities
+
+### Topological node similarities
 
 Dynamic GDVs [5], i.e.  dynamic graphlet degree vectors, are node
 descriptors that take both the local structural topology and local
@@ -189,7 +191,7 @@ dynamic graphlets, Y. Hulovatyy,  H. Chen, and  T. Milenković,
 Bioinformatics, Volume 31, Issue 12, 15 June 2015, Pages i171–i180,
 (<https://doi.org/10.1093/bioinformatics/btv227>).
 
-## Using BLAST E-values
+### External node similarities
 
 Instead of dynamic GDVs, we can alternatively use BLAST E-values to
 align networks as follows.
@@ -380,7 +382,9 @@ We can write the alignment to file as follows.
 writedlm("exalnfile.txt", nodepairs)
 ```
 
-## Using static GDVs
+## Computing node similarities
+
+### Topological node similarities
 
 Static GDVs, or GDVs, are node descriptors that take the local
 topology of nodes in a static network into account. The GDVs of a
@@ -419,7 +423,7 @@ nodepairs = hcat(net1.nodes, net2.nodes[f])
 nc = mean(net1.nodes .== net2.nodes[f])
 ```
 
-## Using BLAST E-values
+### External node similarities
 
 Of course, we can similarly use E-values to align two networks as
 well. We will be using the same yeast networks as in the above
