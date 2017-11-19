@@ -1,13 +1,13 @@
 # Introduction
 
-[DynaWAVE](https://github.com/vvjn/DynaWAVE.jl) is our software tool
-for pairwise global alignment of dynamic
-networks. Dynamic networks are networks that evolve over time. Until
-recently, existing methods for network alignment (NA) were limited to being
-able to only align static networks. However, most complex real-world
-systems evolve over time and should thus be modeled as dynamic
-networks. Thus, [DynaMAGNA++](https://www3.nd.edu/~cone/DynaMAGNA++/)
-[1] was introduced as a proof-of-concept method for aligning dynamic
+DynaWAVE is our software tool
+for pairwise global alignment of dynamic networks. Dynamic networks
+are networks that evolve over time. Until recently, existing methods
+for network alignment (NA) were limited to being able to only align
+static networks. However, most complex real-world systems evolve over
+time and should thus be modeled as dynamic networks. Thus,
+[DynaMAGNA++](https://www3.nd.edu/~cone/DynaMAGNA++/) [1] was
+introduced as a proof-of-concept method for aligning dynamic
 networks. However, DynaMAGNA++ does not necessarily scale well to
 larger networks.
 
@@ -44,27 +44,63 @@ Bioinformatics (WABI), Atlanta, GA, USA, September 10-12, 2015, pages
 
 [4] The post-genomic era of biological network alignment, EURASIP
 Journal on Bioinformatics and Systems Biology, December 2015, 2015:3,
-F. E. Faisal, L. Meng, J. Crawford, and T. Milenković (<https://doi.org/10.1186/s13637-015-0022-9>).
+F. E. Faisal, L. Meng, J. Crawford, and T. Milenković
+(<https://doi.org/10.1186/s13637-015-0022-9>).
 
 # Installation
 
-DynaWAVE requires [Julia 0.6](https://julialang.org/).
-DynaWAVE can be installed by going to the base directory of this
+DynaWAVE requires [Julia 0.6](https://julialang.org/), which needs to be first installed.
+DynaWAVE can then be installed by going to the base directory of this
 software and running `julia install_dynawave.jl` in the command-line.
-After this, we can start `julia` and use the DynaWAVE module.
-To follow the instructions below more easily, start julia in the
-`examples/` directory.
 
-We load the `DynaWAVE` module to align networks, as well as the `NetalignUtils` and
-`NetalignMeasures` modules to read network files and run  related functions.
+
+# Simple command-line tool
+
+DynaWAVE contains a simple command-line tool that aligns two dynamic networks, given node similarities between them. The following are instructions on using the simple command-line tool for DynaWAVE.
+
+**1.** Start by navigating to the `bin/` directory from the base directory of this software, and running the command `julia dynawave.jl`. This shows examples of how to align two dynamic networks, given node similarities between them. Below are detailed instructions on how to align two example networks.
+
+**2.** Choose two networks to align. DynaWAVE accepts networks in the event list format (see an [example network 1](ev1.txt) and an [example network 2](ev2.txt)). Each line in the event list format contains an event, which consists of the event's start time, end time, first node, and second node, respectively.
+
+**3.** Choose a node similarity file. DynaWAVE accepts node similarities in the node pair list format (see an [example node similarity file](evsim.txt) corresponding to the above two networks). The node similarity file consists of three columns, the first column being nodes from network 1, the second column being nodes from network 2, and the third column being the node similarities. Each node similarity must be between 0 and 1, inclusive. The node similarity file does not necessarily need to contain similarities between all pairs of nodes across the networks.
+
+**4.** Choose the output alignment file name. DynaWAVE will output the alignment file to this file.
+
+**5.**  Given network 1 file, `ev1.txt`, network 2 file, `ev2.txt`, node similarity file, `evsim.txt`, and the output alignment file `output_alignment.txt`, the following command is run in order to align the two networks:
+
+```
+julia dynawave.jl ev1.txt ev2.txt evsim.txt output_alignment.txt
+```
+
+The above command will produce the file `output_alignment.txt`, which contains the alignment. It will also print various statistics related to the alignment.
+
+
+# Advanced command-line tool
+
+The following contains instructions on 
+
+**1.** how to align two dynamic networks using DynaWAVE, given node similarities between the two networks,
+
+**2.** how to align two dynamic networks using DynaWAVE, after calculating dynamic graphlet-based node similarities from dynamic graphlet degree vectors (DGDVs), 
+
+**3.** how to align two dynamic protein interaction networks using DynaWAVE, after calculating external node similarities from BLAST E-values, 
+
+**4.** how to align two static networks using DynaWAVE, given node similarities between the two networks,
+
+**5.** how to align two static networks using WAVE, after calculating static graphlet-based node similarities from static graphlet degree vectors (GDVs), and 
+
+**6.** how to align two static protein interaction networks using WAVE, after calculating external node similarities from BLAST E-values.
+
+To follow the instructions below, start `julia` in the
+`examples/` directory from the base directory of this software, and run the following command:
 
 ```julia
 using DynaWAVE, NetalignUtils, NetalignMeasures
 ```
 
-# Aligning two dynamic networks
+## Aligning two dynamic networks
 
-## A toy example
+### A toy example
 
 First, we read in the dynamic networks `ev1.txt` and `ev2.txt` (from the
 `examples/` directory). Note that the two networks are very similar,
@@ -104,7 +140,7 @@ shell> cat ev2.txt
 ```
 
 Then, we read in the node similarities between the two networks from evsim.txt. Node similarities
-can be generated in many ways including BLAST E-values, (dynamic) graphlet degree vector similarities, etc.
+can be generated in many ways including BLAST E-values (for protein interaction networks), (dynamic) graphlet degree vector similarities, etc.
 
 ```julia
 R = readlistmat("evsim.txt", net1.nodes, net2.nodes)
@@ -142,9 +178,9 @@ writedlm("exalnfile.txt", nodepairs)
 
 ```
 
-## Computing node similarities
+### Computing node similarities
 
-### Topological node similarities
+#### Topological node similarities
 
 Dynamic GDVs [5], i.e.  dynamic graphlet degree vectors, are node
 descriptors that take both the local structural topology and local
@@ -191,10 +227,10 @@ dynamic graphlets, Y. Hulovatyy,  H. Chen, and  T. Milenković,
 Bioinformatics, Volume 31, Issue 12, 15 June 2015, Pages i171–i180,
 (<https://doi.org/10.1093/bioinformatics/btv227>).
 
-### External node similarities
+#### External node similarities
 
 Instead of dynamic GDVs, we can alternatively use BLAST E-values to
-align networks as follows.
+align protein interaction networks as follows.
 
 First, we read in the E-values to memory. We will be using the same
 yeast networks as in the above sub-section.
@@ -217,7 +253,7 @@ Finally, we align the two networks.
 f = dynawave(net1.G, net2.G, S)
 ```
 
-## Creating network instances from network models
+### Creating network instances from network models
 
 We can create random network instances from three network models as in
 the DynaWAVE paper. We create a random instance of a 1000-node dynamic
@@ -248,7 +284,7 @@ initializing the network with a 5-node clique.
 G = rand(SocialNE(0.032, 0.8, 0.002, :quad), 1000, 30, 5)
 ```
 
-## Adding noise to a dynamic network
+### Adding noise to a dynamic network
 
 Given a dynamic network, here we add noise to the network. There are
 two methods we use to add noise to a dynamic network: a strict version
@@ -278,7 +314,7 @@ G30 = links_shuffle(G, 0.30)
 European Physical Journal B (2015),
 (<https://doi.org/10.1140/epjb/e2015-60657-4>).
 
-## Converting a dynamic network to a static network
+### Converting a dynamic network to a static network
 
 We can flatten a dynamic network to a static network as follows. There
 is an edge between two nodes in the static network if there is atleast
@@ -292,9 +328,9 @@ G = net1.G
 Gstatic = flatten(G)
 ```
 
-# Aligning two static networks
+## Aligning two static networks
 
-## A toy example
+### A toy example
 
 This software tool can also be used to align two static networks using
 the WAVE method [3]. First, we read
@@ -382,9 +418,9 @@ We can write the alignment to file as follows.
 writedlm("exalnfile.txt", nodepairs)
 ```
 
-## Computing node similarities
+### Computing node similarities
 
-### Topological node similarities
+#### Topological node similarities
 
 Static GDVs, or GDVs, are node descriptors that take the local
 topology of nodes in a static network into account. The GDVs of a
@@ -423,7 +459,7 @@ nodepairs = hcat(net1.nodes, net2.nodes[f])
 nc = mean(net1.nodes .== net2.nodes[f])
 ```
 
-### External node similarities
+#### External node similarities
 
 Of course, we can similarly use E-values to align two networks as
 well. We will be using the same yeast networks as in the above
@@ -435,13 +471,13 @@ S = NodeSimMeasure(:evalues, E).S
 f = wave(net1.G, net2.G, S)
 ```
 
-# Comparison of static NA (via WAVE) and dynamic NA (via DynaWAVE)
+## Comparison of static NA (via WAVE) and dynamic NA (via DynaWAVE)
 
 In the DynaWAVE paper, we compared DynaWAVE to WAVE (and MAGNA++ and
 DynaMAGNA++). The following is an example demonstrating how to make
-this comparison.
+this comparison using WAVE and DynaWAVE.
 
-First, we load the dynamic networks, their corresponding dynamic GDVs,
+First, we load the two dynamic networks, their corresponding dynamic GDVs,
 and calculate node similarities.
 
 ``` julia
