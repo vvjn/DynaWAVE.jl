@@ -1,7 +1,3 @@
-using NetalignUtils
-using DataStructures
-using UnicodePlots
-
 export wave, dynawave, shufflealign, WaveModel, align!
 
 type WaveModel{E,T<:AbstractMatrix,M<:NetalignMeasure}
@@ -190,7 +186,7 @@ Atlanta, GA, USA, September 10-12, 2015, pages 16-39).
 function wave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
               S::AbstractMatrix, beta=0.5,
               seeds=Vector{Tuple{Int,Int}}();skipalign=false,details=false,verbose=false)
-    if typeof(S) <: SparseMatrixCSC
+    if issparse(SparseMatrixCSC)
         S = SparseMatrixLIL(S)
     end
     M = WaveModel(G1,G2, ConvexCombMeasure(WECMeasure(G1,G2,S),
