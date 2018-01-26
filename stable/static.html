@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Static NA · DynaWAVE</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>DynaWAVE</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search.html"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="index.html">Tutorial</a></li><li class="current"><a class="toctext" href="static.html">Static NA</a><ul class="internal"><li class="toplevel"><a class="toctext" href="#sec6-1">Running WAVE with pre-computed node similarities</a></li><li class="toplevel"><a class="toctext" href="#Computing-node-similarities-and-then-running-WAVE-1">Computing node similarities and then running WAVE</a></li><li><a class="toctext" href="#sec7-1">Computing topological node similarities</a></li><li><a class="toctext" href="#sec8-1">Computing external node similarities from BLAST E-values</a></li><li class="toplevel"><a class="toctext" href="#sec9-1">Comparison of static and dynamic NA</a></li></ul></li><li><a class="toctext" href="funs.html">Functions</a></li><li><a class="toctext" href="internals.html">Internals</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href="static.html">Static NA</a></li></ul><a class="edit-page" href="https://github.com/vvjn/DynaWAVE.jl/blob/master/docs/src/static.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Static NA</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Static-NA-1" href="#Static-NA-1">Static NA</a></h1><h1><a class="nav-anchor" id="sec6-1" href="#sec6-1">Running WAVE with pre-computed node similarities</a></h1><p>This software tool can also be used to align two static networks using the WAVE method [3]. First, we read in the static networks <code>ex1.gw</code> and <code>ex2.gw</code> (from the <code>examples/</code> directory). The two networks are very similar, with corresponding nodes of the same names. The networks are in the LEDA format (hence, the <code>.gw</code> extension) and so we use the <code>readgw</code> function to load it.</p><pre><code class="language-julia">net1 = readgw(&quot;ex1.gw&quot;)
+net2 = readgw(&quot;ex2.gw&quot;)</code></pre><pre><code class="language-none">shell&gt; cat ex1.gw
+LEDA.GRAPH
+void
+void
+-2
+5
+|{A}|
+|{B}|
+|{C}|
+|{D}|
+|{E}|
+5
+1 2 0 |{}|
+2 3 0 |{}|
+3 4 0 |{}|
+4 1 0 |{}|
+4 5 0 |{}|
+
+shell&gt; cat ex2.gw
+LEDA.GRAPH
+void
+void
+-2
+6
+|{A}|
+|{B}|
+|{C}|
+|{D}|
+|{E}|
+|{F}|
+6
+1 2 0 |{}|
+2 3 0 |{}|
+3 4 0 |{}|
+4 1 0 |{}|
+4 5 0 |{}|
+5 6 0 |{}|</code></pre><p>Then, we read in the node similarities between the two networks from <code>evgdvsim.txt</code>. The node similarities are also stored in a different format and we use the <code>readdlm</code> function to load it.</p><pre><code class="language-julia">R = readdlm(&quot;exgdvsim.txt&quot;, header=true)[1]</code></pre><pre><code class="language-none">shell&gt; cat exgdvsim.txt
+5 6
+0.972933 0.93658 0.972933 0.925753 0.935525 0.903174
+0.939805 0.988206 0.939805 0.91356 0.933523 0.937895
+0.972933 0.93658 0.972933 0.925753 0.935525 0.903174
+0.917616 0.925602 0.917616 0.973495 0.910664 0.896031
+0.922085 0.933688 0.922085 0.879783 0.951919 0.954437</code></pre><p>Finally, we align the two networks using the node similarities.</p><pre><code class="language-julia">f = wave(net1.G, net2.G, R)</code></pre><p>Same as before, <code>f</code> contains the alignment between the two networks and we construct the aligned node pairs as follows.</p><pre><code class="language-julia">nodepairs = hcat(net1.nodes, net2.nodes[f])</code></pre><p>We can write the alignment to file as follows.</p><pre><code class="language-julia">writedlm(&quot;exalnfile.txt&quot;, nodepairs)</code></pre><h1><a class="nav-anchor" id="Computing-node-similarities-and-then-running-WAVE-1" href="#Computing-node-similarities-and-then-running-WAVE-1">Computing node similarities and then running WAVE</a></h1><h2><a class="nav-anchor" id="sec7-1" href="#sec7-1">Computing topological node similarities</a></h2><p>Static GDVs, or GDVs, are node descriptors that take the local topology of nodes in a static network into account. The GDVs of a network can be calculated using <a href="https://en.wikipedia.org/wiki/GraphCrunch">GraphCrunch</a>. In the following example, we will align, from the <code>examples/</code> directory, a yeast network to itself.</p><p>First, we read the networks and the GDVs into memory.</p><pre><code class="language-julia">net1 = readgw(&quot;0Krogan_2007_high.gw&quot;)
+gdv1 = readgdv(&quot;0Krogan_2007_high.ncount.ndump2&quot;, net1.nodes)
+net2 = readgw(&quot;0Krogan_2007_high.gw&quot;)
+gdv2 = readgdv(&quot;0Krogan_2007_high.ncount.ndump2&quot;, net2.nodes)</code></pre><p>Second, we calculate node similarities between node pairs in the two networks using GDV similarity.</p><pre><code class="language-julia">S = NodeSimMeasure(:gdvs, gdv1, gdv2).S</code></pre><p>Finally, we align the two networks using WAVE.</p><pre><code class="language-julia">f = wave(net1.G, net2.G, S)</code></pre><p>We can construct the node pairs and calculate node correctness as follows</p><pre><code class="language-julia">nodepairs = hcat(net1.nodes, net2.nodes[f])
+
+nc = mean(net1.nodes .== net2.nodes[f])</code></pre><h2><a class="nav-anchor" id="sec8-1" href="#sec8-1">Computing external node similarities from BLAST E-values</a></h2><p>Of course, we can similarly use E-values to align two networks as well. We will be using the same yeast networks as in the above sub-section. We convert the E-values to node similarities and then align.</p><pre><code class="language-julia">E = readevalues(&quot;yeastlc_yeastlc_evalues.txt&quot;, net1.nodes, net2.nodes)
+S = NodeSimMeasure(:evalues, E).S
+f = wave(net1.G, net2.G, S)</code></pre><h1><a class="nav-anchor" id="sec9-1" href="#sec9-1">Comparison of static and dynamic NA</a></h1><p>In the DynaWAVE paper, we compared DynaWAVE to WAVE (and MAGNA++ and DynaMAGNA++). The following is an example demonstrating how to make this comparison using WAVE and DynaWAVE.</p><p>First, we load the two dynamic networks, their corresponding dynamic GDVs, and calculate node similarities.</p><pre><code class="language-julia">t1 = readeventlist(&quot;yeastlc_original_tw_1_1.dy&quot;)
+dgdv1 = readgdv(&quot;yeastlc_original_dgdv_6_4_1.txt&quot;, t1.nodes)
+
+t2 = readeventlist(&quot;yeastlc_rnd_0.10_1_tw_1_1.dy&quot;)
+dgdv2 = readgdv(&quot;yeastlc_rnd_0.10_1_dgdv_6_4_1.txt&quot;, t2.nodes)
+
+Sdgdv = NodeSimMeasure(:pcagdvs,dgdv1,dgdv2).S</code></pre><p>Then, we load the corresponding flattened static networks, their corresponding GDVs, and calculate node similarities calculated using the PCA-based technique described in [5].</p><pre><code class="language-julia">s1 = readgw(&quot;yeastlc_original.gw&quot;)
+gdv1 = readgdv(&quot;yeastlc_original.gdv.ndump2&quot;, s1.nodes)
+
+s2 = readgw(&quot;yeastlc_original.gw&quot;)
+gdv2 = readgdv(&quot;yeastlc_original.gdv.ndump2&quot;, s2.nodes)
+
+Sgdv = NodeSimMeasure(:pcagdvs,gdv1,gdv2).S</code></pre><p>We can flatten a dynamic network to a static network as follows. There is an edge between two nodes in the static network if there is atleast one interaction (dynamic edge) between two nodes in the dynamic network.</p><pre><code class="language-julia">net1 = readeventlist(&quot;yeastlc_original_tw_1_1.dy&quot;)
+Gdynamic = net1.G
+
+Gstatic = flatten(Gdynamic)</code></pre><p>Notice that the flattened version of both <code>t1</code> and <code>t1</code> result in the same network as <code>s1</code> (modulo node permutations) due to our randomization model. That is:</p><pre><code class="language-julia">flatten(t1[sortperm(t1.nodes)]) == flatten(t2[sortperm(t2.nodes)]) == s1[sortperm(s1.nodes)]
+# true</code></pre><p>Then, we align the networks using both WAVE and DynaWAVE. Here, we set the <span>$\beta$</span> parameter to <code>0.5</code> as in the paper.</p><pre><code class="language-julia">fdynamic = dynawave(t1.G, t2.G, Sdgdv, 0.5)
+
+fstatic = wave(s1.G, s2.G, Sgdv, 0.5)</code></pre><p>We can calculate node correctness as follows.</p><pre><code class="language-julia">nc_dynamic = nodecorrectness(fdynamic, t1.nodes, t2.nodes)
+
+nc_static = nodecorrectness(fstatic, s1.nodes, s2.nodes)</code></pre><p>Finally, above, we aligned the yeast dynamic network to the same network with 10% randomization. We can also align the yeast dynamic network to itself.</p><pre><code class="language-julia">S = NodeSimMeasure(:pcagdvs,gdv1,gdv1).S
+f = dynawave(t1.G, t1.G, S, 0.5)
+nodecorrectness(f, t1.nodes, t1.nodes)</code></pre><footer><hr/><a class="previous" href="index.html"><span class="direction">Previous</span><span class="title">Tutorial</span></a><a class="next" href="funs.html"><span class="direction">Next</span><span class="title">Functions</span></a></footer></article></body></html>
