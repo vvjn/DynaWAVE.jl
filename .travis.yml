@@ -27,7 +27,7 @@ git:
 
 ## uncomment the following lines to override the default test script
 script:
-  - julia -e 'Pkg.clone("https://github.com/vvjn/NetalignMeasures.jl"); Pkg.clone("https://github.com/vvjn/NetalignUtils.jl"); Pkg.clone(pwd()); Pkg.build("DynaWAVE"); Pkg.test("DynaWAVE"; coverage=true)'
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("DynaWAVE"); Pkg.test("DynaWAVE"; coverage=true)'
 after_success:
   - julia -e 'Pkg.add("Documenter")'
   - julia -e 'cd(Pkg.dir("DynaWAVE")); include(joinpath("docs", "make.jl"))'
