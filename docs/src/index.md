@@ -21,10 +21,7 @@ T. Milenković (2017), under revision.
 # [II. Installation](@id secm2)
 
 [Julia 0.6](https://julialang.org/) needs to be installed prior to
-using DynaWAVE. After starting a command-line terminal (in Linux,
-Windows, or OS X), DynaWAVE can then be installed by navigating to the base
-directory of this software and running the single command `julia
-install_dynawave.jl`.
+using DynaWAVE. DynaWAVE can be installed by starting Julia and executing the command `Pkg.add("DynaWAVE")`.
 
 
 # [III. Running DynaWAVE with pre-computed node similarities](@id secm3)
@@ -35,7 +32,7 @@ compute node similarities as in the DynaWAVE paper, then go to Section
 [IV](@ref secm4).
 
 **1.** Start by navigating to the `bin/` directory from the base
-directory of this software, and running the command `julia
+directory of this package (`Pkg.dir("DynaWAVE")`), and running the command `julia
 dynawave.jl`. This shows examples of how to align two dynamic
 networks, given node similarities between them. Below are detailed
 instructions on how to align two example networks.

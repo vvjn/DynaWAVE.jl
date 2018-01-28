@@ -70,7 +70,7 @@ function buildpriorityqueue(M::WaveModel)
 end
 
 function updatepriorityqueue!(M::WaveModel,Q::PriorityQueue,
-                              L1::Set{Int,},L2::Set{Int}, i::Int,j::Int,
+                              L1::Set{Int},L2::Set{Int}, i::Int,j::Int,
                               adj1::AbstractVector{Int},adj2::AbstractVector{Int})
     n1 = size(M.G1,1); n2 = size(M.G2,1)
     # remove cross node pairs containing i or j
@@ -239,9 +239,9 @@ function dynawave(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
 end
 
 """
-    shufflealign(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
+    shufflealign(method, G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                       S::AbstractMatrix, beta::Float64,
-                      seeds=[], details=false,method=dynawave) -> f [, M]
+                      seeds=[], details=false) -> f [, M]
 
 Given two networks and node similarities between them, before aligning
 using either [`dynawave`](@ref) or [`wave`](@ref), this shuffles each
@@ -270,10 +270,10 @@ and then returns the deshuffled alignment.
 # Output
 - `f` : The resulting alignment has the correct node order with respect to the input `G1` and `G2` networks; i.e., it is "deshuffled".
 """
-function shufflealign(G1::SparseMatrixCSC,G2::SparseMatrixCSC,
+function shufflealign(method::Function, G1::SparseMatrixCSC,G2::SparseMatrixCSC,
                       S::AbstractMatrix, beta::Float64,
                       seeds=Vector{Tuple{Int,Int}}();
-                      details=false,method=dynawave)
+                      details=false)
     p1 = randperm(size(G1,1))
     p2 = randperm(size(G2,1))
     q1 = invperm(p1)

@@ -10,13 +10,11 @@ Network alignment of dynamic(temporal) networks.
 # Installation
 
 DynaWAVE can be installed by starting julia and executing the
-following commands. This will install DynaWAVE and packages that it
+following command. This will install DynaWAVE and packages that it
 depends on.
 
 ```julia
-Pkg.clone("https://github.com/vvjn/NetalignMeasures.jl")
-Pkg.clone("https://github.com/vvjn/NetalignUtils.jl")
-Pkg.clone("https://github.com/vvjn/DynaWAVE.jl")
+Pkg.add("DynaWAVE")
 ```
 
 # Documentation
