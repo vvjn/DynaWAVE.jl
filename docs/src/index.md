@@ -16,7 +16,8 @@ pre-computed node similarities. Section [V](@ref secm5) describes how
 to mimic some of the experiments from our DynaWAVE paper.
 
 [1] Aligning dynamic networks with DynaWAVE, V. Vijayan and
-T. Milenković (2017), under revision.
+T. Milenković (2017), Bioinformatics (2017), btx841,
+(<https://doi.org/10.1093/bioinformatics/btx841>).
 
 # [II. Installation](@id secm2)
 
