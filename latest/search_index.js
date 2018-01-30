@@ -21,7 +21,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Tutorial",
     "title": "I. Introduction",
     "category": "section",
-    "text": "DynaWAVE is our software tool for pairwise global alignment of dynamic networks.The following sections contain a tutorial on how to align dynamic networks using DynaWAVE.Namely, Section II contains installation instructions. Section III describes how to align two dynamic networks when pre-computed node similarities are available as input to DynaWAVE. On the other hand, Section IV describes how to align two dynamic networks without having available pre-computed node similarities. Section V describes how to mimic some of the experiments from our DynaWAVE paper.[1] Aligning dynamic networks with DynaWAVE, V. Vijayan and T. Milenković (2017), under revision."
+    "text": "DynaWAVE is our software tool for pairwise global alignment of dynamic networks.The following sections contain a tutorial on how to align dynamic networks using DynaWAVE.Namely, Section II contains installation instructions. Section III describes how to align two dynamic networks when pre-computed node similarities are available as input to DynaWAVE. On the other hand, Section IV describes how to align two dynamic networks without having available pre-computed node similarities. Section V describes how to mimic some of the experiments from our DynaWAVE paper.[1] Aligning dynamic networks with DynaWAVE, V. Vijayan and T. Milenković (2017), Bioinformatics (2017), btx841, (https://doi.org/10.1093/bioinformatics/btx841)."
 },
 
 {
